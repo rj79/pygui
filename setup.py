@@ -16,7 +16,7 @@ setup(
     description="A framework for building GUIs on top of pygame.",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
-    install_requires=[],
+    install_requires=["pygame"],
     python_requires=">=3.8",
     test_suite="",
     url="https://github.com/rj79/pygui",

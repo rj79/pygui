@@ -16,6 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+dependencies = ["pygame"]
 
 [project.urls]
 Homepage = "https://github.com/rj79/pygui"

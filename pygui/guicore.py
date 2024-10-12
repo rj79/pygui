@@ -1,8 +1,7 @@
 from __future__ import annotations
 import asyncio
-import colors
-import common
-from common import Point
+from .colors import *
+from .common import Point
 import logging
 from os.path import join
 import pygame
@@ -98,12 +97,12 @@ class MeasureSpec:
 
 
 def args_to_point(*args):
-    if len(args) == 1 and isinstance(args[0], common.Point):
+    if len(args) == 1 and isinstance(args[0], Point):
         return args[0]
     if len(args) == 1 and isinstance(args[0], tuple):
-        return common.Point(args[0][0], args[0][1])
+        return Point(args[0][0], args[0][1])
     if len(args) == 2:
-        return common.Point(args[0], args[1])
+        return Point(args[0], args[1])
 
 
 def OnClickDoNothing(pos, view:View, button:int):
@@ -240,25 +239,25 @@ class View:
             self.MinDimension = None
 
     def SetPosition(self, *args):
-        if len(args) == 1 and isinstance(args[0], common.Point):
+        if len(args) == 1 and isinstance(args[0], Point):
             self.Rect.x = args[0].X
             self.Rect.y = args[0].Y
         else:
-            point = common.Point(*args)
+            point = Point(*args)
             self.Rect.x = point.X
             self.Rect.y = point.Y
 
     def SetSize(self, width, height):
         self.Rect.size = (width, height)
 
-    def GetPosition(self) -> common.Point:
-        return common.Point(self.Rect.x, self.Rect.y)
+    def GetPosition(self) -> Point:
+        return Point(self.Rect.x, self.Rect.y)
 
     def SetBackgroundColor(self, color):
         self.BackgroundColor = color
 
     def IsPointInside(self, *args):
-        point = common.Point(*args)
+        point = Point(*args)
         return self.Rect.collidepoint(point.X, point.Y)
 
     def Intersection(self, other) -> pygame.Rect:
@@ -694,29 +693,29 @@ class CheckboxView(View):
 
     def OnDraw(self, surface):
         inside = self.Rect.inflate(-2, -2)
-        pygame.draw.rect(surface, colors.ALMOST_WHITE, inside)
-        pygame.draw.rect(surface, colors.ALMOST_BLACK, self.Rect, 1)
+        pygame.draw.rect(surface, ALMOST_WHITE, inside)
+        pygame.draw.rect(surface, ALMOST_BLACK, self.Rect, 1)
         if self.Checked:
             cross = inside.inflate(-2, -2)
             pygame.draw.line(
-                surface, colors.ALMOST_BLACK, cross.topleft, cross.bottomright, 2
+                surface, ALMOST_BLACK, cross.topleft, cross.bottomright, 2
             )
             pygame.draw.line(
-                surface, colors.ALMOST_BLACK, cross.topright, cross.bottomleft, 2
+                surface, ALMOST_BLACK, cross.topright, cross.bottomleft, 2
             )
 
 
 class DragInfo:
     def __init__(self):
-        self.Offset:common.Point = None
+        self.Offset:Point = None
         self.View:View = None
         self.SaveX = 0
         self.SaveY = 0
         self.Dragging = False
 
     def BeginDrag(self, pos, view):
-        self.Offset = common.Point.FromTuple(pos) - \
-            common.Point.FromTuple(view.GetPosition())
+        self.Offset = Point.FromTuple(pos) - \
+            Point.FromTuple(view.GetPosition())
         self.View = view
         if view is not None:
             (self.SaveX, self.SaveY) = view.GetPosition()
@@ -724,7 +723,7 @@ class DragInfo:
 
     def Update(self, pos):
         if self.View is not None:
-            self.View.SetPosition(common.Point(pos) - self.Offset)
+            self.View.SetPosition(Point(pos) - self.Offset)
 
     def GetSavedViewPos(self):
         return (self.SaveX, self.SaveY)
@@ -934,7 +933,7 @@ class Activity:
         if self.ContentView:
             width = self.Context.Surface.get_width()
             height = self.Context.Surface.get_height()
-            self.Context.Surface.fill(colors.GRAY_50)
+            self.Context.Surface.fill(GRAY_50)
             self.ContentView.Measure(None, None)
             self.ContentView.Layout(0, 0, width, height)
             self.ContentView.Draw(self.Context.Surface)

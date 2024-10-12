@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pygui"
+version = "0.1"
+authors = [
+  { name="Robert Johansson", email="robertrockar@live.com" },
+]
+description = "A framework for creating GUIs on top of Pygame."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/rj79/pygui"
+Issues = "https://github.com/rj79/pygui/issues"

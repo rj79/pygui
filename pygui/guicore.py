@@ -758,6 +758,7 @@ class AppContext:
         
         self._desired_fps = AppContext.DESIRED_FPS
         self._running = True
+        self._render_time = 0
 
     @property
     def desired_fps(self):
@@ -780,12 +781,17 @@ class AppContext:
             dt = t1 - t0
             t0 = t1
             self.OnLoop(dt)
+            r0 = monotonic()
             self.CurrentActivity.Render()
+            self._render_time = monotonic() - r0
             pygame.display.flip()
             await asyncio.sleep(1 / self.desired_fps)
         logging.debug('Exiting pygame_task')
         
         await self.on_shutdown()
+
+    def RenderTime(self):
+        return self._render_time
 
     def RegisterActivity(self, activity):
         name = activity.GetName()

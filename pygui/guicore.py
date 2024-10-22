@@ -765,9 +765,11 @@ class AppContext:
         return self._desired_fps
     
     async def on_startup(self):
+        # Override
         pass
     
     async def on_shutdown(self):
+        # Override
         pass
     
     async def pygame_task(self):
@@ -775,6 +777,9 @@ class AppContext:
 
         t0 = monotonic()
         while self.IsRunning():
+            if not self.CurrentActivity:
+                logging.error('No activity is active.')
+                break
             if pygame.event.peek():
                 self.CurrentActivity.DefaultEventHandler()
             t1 = monotonic()
@@ -803,14 +808,32 @@ class AppContext:
 
     def StartActivity(self, activityName):
         if activityName in iter(self.Activities.keys()):
+            nextActivity = self.Activities[activityName]
+            if nextActivity == self.CurrentActivity:
+                logging.warning(f'Cannot start the same activity "{activityName}" from itself.')
+                return
             if self.CurrentActivity:
                 self.CurrentActivity.Deactivate()
-            self.CurrentActivity = self.Activities[activityName]
+            self.CurrentActivity = nextActivity
             self.ActivityStack.append(self.CurrentActivity)
             self.CurrentActivity.Activate()
-            logging.debug(f'Activated {activityName}')
         else:
             logging.error(f'Can\'t find activity {activityName}')
+
+    def SwitchToActivity(self, activityName):
+        if activityName in iter(self.Activities.keys()):
+            nextActivity = self.Activities[activityName]
+            if nextActivity == self.CurrentActivity:
+                logging.warning(f'Cannot switch to the same activity "{activityName}" from itself.')
+                return
+            if self.CurrentActivity:
+                self.CurrentActivity.Deactivate()
+            self.CurrentActivity = nextActivity
+            self.ActivityStack.pop()
+            self.ActivityStack.append(self.CurrentActivity)
+            self.CurrentActivity.Activate()
+        else:
+            logging.error(f'Can\'t find activity "{activityName}"')
 
     def ExitActivity(self):
         logging.debug('ExitActivity')
@@ -876,11 +899,18 @@ class Activity:
 
             if event.type == pygame.QUIT:
                 self.Exit()
+                break
+
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.Exit()
+                    break
 
-            elif event.type == pygame.MOUSEMOTION:
+            if self.ContentView is None:
+                logging.error(f'Activity "{self.Name}" has no content.')
+                break
+
+            if event.type == pygame.MOUSEMOTION:
                 self.HoverView  = self.ContentView.FindView(event.pos[0],
                                                             event.pos[1])
 
@@ -945,7 +975,10 @@ class Activity:
             self.ContentView.Draw(self.Context.Surface)
 
     def StartActivity(self, activityName):
-        self.Context.Callback.StartActivity(activityName)
+        self.Context.StartActivity(activityName)
+
+    def SwitchToActivity(self, activityName):
+        self.Context.SwitchToActivity(activityName)
 
     # Do not override
     def Activate(self):

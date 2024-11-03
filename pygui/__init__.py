@@ -1,1 +1,1 @@
-from .guicore import AbsoluteLayout, Activity, AppContext, ButtonView, DragInfo, LinearLayout, View
+from .guicore import AbsoluteLayout, Activity, AppContext, ButtonView, Dimension, DragInfo, LinearLayout, View, ViewGroup

@@ -17,6 +17,8 @@ CENTER = 0x11
 CENTER_HORIZONTAL = 0x01
 CENTER_VERTICAL = 0x11
 
+GraphicsPath = '.'
+
 def SurfaceToString(surface):
     return "(w=%d h=%d p=%d)" % (surface.get_width(),
                                  surface.get_height(),
@@ -194,7 +196,8 @@ class View:
         self.Active = True
 
     def _load_image(self, name):
-        return pygame.image.load(join(self.GraphicsPath, name))
+        global GraphicsPath
+        return pygame.image.load(join(GraphicsPath, name))
 
     def _widget_to_window(self, point: Point) -> Point:
         """ Translate point which is relative to upper left corner of widget

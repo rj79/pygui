@@ -19,6 +19,10 @@ CENTER_VERTICAL = 0x11
 
 GraphicsPath = '.'
 
+def SetGraphicsPath(path):
+    global GraphicsPath
+    GraphicsPath = path
+
 def SurfaceToString(surface):
     return "(w=%d h=%d p=%d)" % (surface.get_width(),
                                  surface.get_height(),

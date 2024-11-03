@@ -2,6 +2,7 @@ from __future__ import annotations
 import asyncio
 from .colors import *
 from .common import Point
+from functools import lru_cache
 import logging
 from os.path import join
 import pygame
@@ -105,12 +106,18 @@ def args_to_point(*args):
         return Point(args[0], args[1])
 
 
+# Creating a font object is expensive, so cache the result
+@lru_cache(maxsize=32)
+def GetFont(name, size, bold, italic):
+    return pygame.font.SysFont(name, size, bold, italic)
+
+
 def OnClickDoNothing(pos, view:View, button:int):
     pass
 
 
 def MeasureText(text, name, size, bold, italic):
-    font = pygame.font.SysFont(name, size, bold, italic)
+    font = GetFont(name, size, bold, italic)
     return font.size(text)
 
 
@@ -121,7 +128,7 @@ def DrawText(surface, pos, text,
              bold=False,
              italic=False,
              antialias=True):
-    font = pygame.font.SysFont(name, size, bold, italic)
+    font = GetFont(name, size, bold, italic)
 
     msgSurface = font.render(text, antialias, color)
     msgRect = msgSurface.get_rect()
@@ -512,7 +519,7 @@ class TextView(View):
         self.Text = text
 
     def OnMeasure(self, widthMeasureSpec, heightMeasureSpec):
-        font = pygame.font.SysFont(self.FontName, self.TextSize,
+        font = GetFont(self.FontName, self.TextSize,
                                    self.Bold, self.Italic)
         width, height = font.size(self.Text)
         self.SetMeasuredDimension(width, height)
@@ -521,8 +528,8 @@ class TextView(View):
         self.Gravity = gravity
 
     def OnDraw(self, surface):
-        font = pygame.font.SysFont(self.FontName, self.TextSize,
-                                   self.Bold, self.Italic)
+        font = GetFont(self.FontName, self.TextSize,
+                       self.Bold, self.Italic)
         msgSurface = font.render(self.Text, True, self.TextColor)
         msgRect = msgSurface.get_rect()
         if self.Gravity == 0:

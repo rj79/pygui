@@ -202,11 +202,27 @@ class View:
     def _load_image(self, name):
         global GraphicsPath
         return pygame.image.load(join(GraphicsPath, name))
+ 
+    def _offset(self, obj):
+        """ Translate a point or rectangle from view coordinate to window coordinate"""
+        if len(obj) == 2:
+            # Offset a pos 2-tuple
+            return (obj[0] + self.Rect.left, obj[1] + self.Rect.top)
+        elif len(obj) == 4:
+            # Offset a rect 4-tuple
+            return (obj[0] + self.Rect.left, obj[1] + self.Rect.top, obj[2], obj[3])
+    
+    def DrawLine(self, surface, color, start_pos, end_pos, width=1):
+        """ Draws a line. Coordinates are relative to the top left corner of the view. """
+        pygame.draw.line(surface, color, self._offset(start_pos), self._offset(end_pos), width)
 
-    def _widget_to_window(self, point: Point) -> Point:
-        """ Translate point which is relative to upper left corner of widget
-            to a point relative to the upper left corner of the window """
-        return Point(self.Rect.x, self.Rect.y) + point * (self.TileSize + 1)
+    def DrawRect(self, surface, color, rect, width=0):
+        """ Draws a rectangle. Coordinates are relative to the top left corner of the view. """
+        pygame.draw.rect(surface, color, self._offset(rect), width)
+
+    def FillSelf(self, surface, color):
+        """ Fills the view with a color."""
+        pygame.draw.rect(surface, color, self.Rect)
 
     def SetActive(self, state):
         self.Active = state
@@ -326,7 +342,6 @@ class View:
         self.Rect.top = top
         self.Rect.width = width
         self.Rect.height = height
-        pass
 
     def OnEvent(self, event):
         pass

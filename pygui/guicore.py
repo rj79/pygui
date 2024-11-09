@@ -204,12 +204,16 @@ class View:
                  color=(0, 0, 0),
                  bold=False,
                  italic=False,
-                 antialias=True):
+                 antialias=True, 
+                 align=0):
         font = GetFont(name, size, bold, italic)
 
         msgSurface = font.render(text, antialias, color)
         msgRect = msgSurface.get_rect()
-        msgRect.topleft = self._offset(pos)
+        if align == 0:
+            msgRect.topleft = self._offset(pos)
+        elif align == 1:
+            msgRect.midtop = self._offset(pos)
         surface.blit(msgSurface, msgRect)
 
     def CenterText(self, surface, pos, text, size=12, name='sans',

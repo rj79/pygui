@@ -127,32 +127,6 @@ def MeasureText(text, name, size, bold, italic):
     return font.size(text)
 
 
-def DrawText(surface, pos, text,
-             size=12,
-             name='sans',
-             color=(0, 0, 0),
-             bold=False,
-             italic=False,
-             antialias=True):
-    font = GetFont(name, size, bold, italic)
-
-    msgSurface = font.render(text, antialias, color)
-    msgRect = msgSurface.get_rect()
-    msgRect.topleft = (pos[0], pos[1])
-    surface.blit(msgSurface, msgRect)
-
-
-def CenterText(surface, pos, text, size=12, name='sans',
-               color=(0, 0, 0),
-               bold=False,
-               italic=False,
-               antialias=True):
-    dim = MeasureText(text, name, size, bold, italic)
-    DrawText(surface, (pos[0] - dim[0] / 2,
-                       pos[1] - dim[1] / 2),
-             text, size, name, color, bold, italic, antialias)
-
-
 class LayoutParams:
     MATCH_PARENT = -1
     WRAP_CONTENT = -2
@@ -223,6 +197,31 @@ class View:
     def FillSelf(self, surface, color):
         """ Fills the view with a color."""
         pygame.draw.rect(surface, color, self.Rect)
+
+    def DrawText(self, surface, pos, text,
+                 size=12,
+                 name='sans',
+                 color=(0, 0, 0),
+                 bold=False,
+                 italic=False,
+                 antialias=True):
+        font = GetFont(name, size, bold, italic)
+
+        msgSurface = font.render(text, antialias, color)
+        msgRect = msgSurface.get_rect()
+        msgRect.topleft = self._offset(pos)
+        surface.blit(msgSurface, msgRect)
+
+    def CenterText(self, surface, pos, text, size=12, name='sans',
+                   color=(0, 0, 0),
+                   bold=False,
+                   italic=False,
+                   antialias=True):
+        dim = MeasureText(text, name, size, bold, italic)
+    
+        self.DrawText(surface, (pos[0] - dim[0] / 2,
+                      pos[1] - dim[1] / 2),
+                      text, size, name, color, bold, italic, antialias)
 
     def SetActive(self, state):
         self.Active = state
@@ -577,15 +576,15 @@ class TextInputView(TextView):
         else:
             text = self.Text
 
-        DrawText(surface, self.Rect.topleft, text=text,
-                 size=self.TextSize,
-                 color=self.TextColor)
+        self.DrawText(surface, self.Rect.topleft, text=text,
+                      size=self.TextSize,
+                      color=self.TextColor)
 
         if self.Focus:
             if self.Insert:
-                DrawText(surface, self.Rect.topleft, text[0:self.Cursor] + '|',
-                         size=self.TextSize,
-                         color=self.TextColor)
+                self.DrawText(surface, self.Rect.topleft, text[0:self.Cursor] + '|',
+                              size=self.TextSize,
+                              color=self.TextColor)
             else:
                 if self.Cursor > 0:
                     c = text[0:self.Cursor] + '_'
@@ -679,8 +678,8 @@ class ButtonView(TextView):
         if not self.Active:
             color = inactive
             
-        CenterText(surface, (self.Rect.left + self.Rect.width / 2,
-                             self.Rect.top + self.Rect.height / 2),
+        self.CenterText(surface, (self.Rect.width / 2,
+                                  self.Rect.height / 2),
                    text=self.Text,
                    size=self.TextSize,
                    bold=True,

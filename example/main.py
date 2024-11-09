@@ -1,4 +1,4 @@
-from pygui import AppContext, Activity, ButtonView, LinearLayout
+from pygui import AppContext, Activity, ButtonView, LinearLayout, View
 import asyncio
 
 def get_event_loop():
@@ -14,6 +14,17 @@ def get_event_loop():
     asyncio.set_event_loop(loop)
     return loop
 
+class CustomView(View):
+    def __init__(self, context):
+        super().__init__(context)
+
+    def OnMeasure(self, wSpec, hSpec):
+        self.SetMeasuredDimension(50, 50)
+
+    def Draw(self, surface):
+        self.FillSelf(surface, (128, 0, 128))
+        self.DrawLine(surface, (128, 255, 0), (1, 1), (self.Rect.width - 2, self.Rect.height - 2), 2)
+        self.DrawRect(surface, (255, 255, 0), (0, 0, self.Rect.width, self.Rect.height), 2)
 
 class MainActivity(Activity):
     def OnInit(self):
@@ -25,8 +36,11 @@ class MainActivity(Activity):
         button2 = ButtonView(self.Context, "Switch to OtherActivity!")
         button2.ClickAction = lambda pos, view, button: self.SwitchToActivity("OtherActivity")
 
+        customView = CustomView(self.Context)
+
         group.AddChild(button1)
         group.AddChild(button2)
+        group.AddChild(customView)
 
         self.SetContentView(group)
         

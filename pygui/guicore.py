@@ -910,6 +910,7 @@ class Activity:
         self.MouseUpView = None
         self.Initialized = False
         self.DragInfo = DragInfo()
+        self._layoutRequested = False
 
     def GetName(self):
         return self.Name
@@ -1002,8 +1003,10 @@ class Activity:
             width = self.Context.Surface.get_width()
             height = self.Context.Surface.get_height()
             self.Context.Surface.fill(GRAY_50)
-            self.ContentView.Measure(None, None)
-            self.ContentView.Layout(0, 0, width, height)
+            if self._layoutRequested:
+                self.ContentView.Measure(None, None)
+                self.ContentView.Layout(0, 0, width, height)
+                self._layoutRequested = False
             self.ContentView.Draw(self.Context.Surface)
 
     def StartActivity(self, activityName):
@@ -1022,6 +1025,7 @@ class Activity:
                 logging.error("OnInit must set a content view")
                 return
             self.Initialized = True
+        self._layoutRequested = True
         self.OnActivate()
 
     # Do not override

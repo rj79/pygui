@@ -1,14 +1,13 @@
 from __future__ import annotations
-import asyncio
 from .colors import *
 from .common import Point
 from functools import lru_cache
 import logging
 from os.path import join
+from pgapp import PgApp
 import pygame
 
 
-from time import monotonic
 
 MATCH_PARENT = -1
 WRAP_CONTENT = -2
@@ -753,10 +752,9 @@ class DragInfo:
         self.View.SetPosition((self.SaveX, self.SaveY))
 
 
-class AppContext:
-    DESIRED_FPS = 30
-    
+class AppContext(PgApp):
     def __init__(self, width, height):
+        super().__init__(width, height)
         self.Callback = None
 
         self.ActivityStack = []
@@ -766,51 +764,11 @@ class AppContext:
 
         self.ContentView = None
 
-        pygame.init()
-        self.Surface = pygame.display.set_mode((width, height),
-                                               pygame.DOUBLEBUF, 32)
-        
-        self._desired_fps = AppContext.DESIRED_FPS
-        self._running = True
-        self._render_time = 0
+    def OnEvent(self, event):
+        self.CurrentActivity.DefaultEventHandler(event)
 
-    @property
-    def desired_fps(self):
-        return self._desired_fps
-    
-    async def on_startup(self):
-        # Override
-        pass
-    
-    async def on_shutdown(self):
-        # Override
-        pass
-    
-    async def pygame_task(self):
-        await self.on_startup()
-
-        t0 = monotonic()
-        while self.IsRunning():
-            if not self.CurrentActivity:
-                logging.error('No activity is active.')
-                break
-            if pygame.event.peek():
-                self.CurrentActivity.DefaultEventHandler()
-            t1 = monotonic()
-            dt = t1 - t0
-            t0 = t1
-            self.OnLoop(dt)
-            r0 = monotonic()
-            self.CurrentActivity.Render()
-            self._render_time = monotonic() - r0
-            pygame.display.flip()
-            await asyncio.sleep(1 / self.desired_fps)
-        logging.debug('Exiting pygame_task')
-        
-        await self.on_shutdown()
-
-    def RenderTime(self):
-        return self._render_time
+    def OnDraw(self, surface):
+        self.CurrentActivity.Render(surface)
 
     def RegisterActivity(self, activity):
         name = activity.GetName()
@@ -858,23 +816,6 @@ class AppContext:
         else:
             self.CurrentActivity = self.ActivityStack[-1]
             self.CurrentActivity.Activate()
-            
-    def RequestStop(self):
-        """ Do not override """
-        logging.info('RequestStop')
-        self._running = False
-        self.OnStopRequested()
-        
-    def IsRunning(self):
-        return self._running
-
-    def OnLoop(self, dt):
-        """ Override """
-        pass
-
-    def OnStopRequested(self):
-        """ Override """
-        pass
 
 
 class Activity:
@@ -906,71 +847,70 @@ class Activity:
     def HandleEvent(self, event):
         return False
 
-    def DefaultEventHandler(self):
-        for event in pygame.event.get():
-            if self.HandleEvent(event):
-                continue
+    def DefaultEventHandler(self, event):
+        if self.HandleEvent(event):
+            return
 
-            if event.type == pygame.QUIT:
+        if event.type == pygame.QUIT:
+            self.Exit()
+            return
+        
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
                 self.Exit()
-                break
+                return
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    self.Exit()
-                    break
+        if self.ContentView is None:
+            logging.error(f'Activity "{self.Name}" has no content.')
+            return
 
-            if self.ContentView is None:
-                logging.error(f'Activity "{self.Name}" has no content.')
-                break
+        if event.type == pygame.MOUSEMOTION:
+            self.HoverView  = self.ContentView.FindView(event.pos[0],
+                                                        event.pos[1])
 
-            if event.type == pygame.MOUSEMOTION:
-                self.HoverView  = self.ContentView.FindView(event.pos[0],
+            if self.MouseDownPos is not None and not self.DragInfo.IsDragging():
+                if self.MouseDownView is not None and self.MouseDownView.Movable:
+                    self.DragInfo.BeginDrag(event.pos, self.MouseDownView)
+                    self.OnDragBegin(event.pos, self.MouseDownView)
+
+            if self.DragInfo.View:
+                self.DragInfo.Update(event.pos)
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            self.MouseDownPos = event.pos
+            self.MouseDownView = self.ContentView.FindView(event.pos[0],
                                                             event.pos[1])
 
-                if self.MouseDownPos is not None and not self.DragInfo.IsDragging():
-                    if self.MouseDownView is not None and self.MouseDownView.Movable:
-                        self.DragInfo.BeginDrag(event.pos, self.MouseDownView)
-                        self.OnDragBegin(event.pos, self.MouseDownView)
+            self.MouseUpView = None
 
-                if self.DragInfo.View:
-                    self.DragInfo.Update(event.pos)
+            fw = self.FocusView
+            self.FocusView = self.MouseDownView
+            if fw != self.FocusView:
+                if fw is not None:
+                    fw.Focus = False
+                if self.FocusView is not None:
+                    self.FocusView.Focus = True
 
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.MouseDownPos = event.pos
-                self.MouseDownView = self.ContentView.FindView(event.pos[0],
-                                                               event.pos[1])
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            self.MouseUpView = self.ContentView.FindView(event.pos[0],
+                                                            event.pos[1])
+            if self.MouseUpView == self.MouseDownView:
+                if self.MouseDownView and not self.DragInfo.IsDragging():
+                    if self.MouseDownView.Active:
+                        self.MouseDownView.ClickAction(event.pos,
+                                                        self.MouseDownView, 
+                                                        event.button)
 
-                self.MouseUpView = None
+            if self.DragInfo.IsDragging():
+                self.OnDragEnd(event.pos, self.MouseDownView, self.DragInfo.GetSavedViewPos())
+                self.DragInfo.EndDrag()
 
-                fw = self.FocusView
-                self.FocusView = self.MouseDownView
-                if fw != self.FocusView:
-                    if fw is not None:
-                        fw.Focus = False
-                    if self.FocusView is not None:
-                        self.FocusView.Focus = True
+            self.MouseDownView = None
+            self.MouseDownPos = None
+            self.MouseUpView = None
 
-            elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                self.MouseUpView = self.ContentView.FindView(event.pos[0],
-                                                             event.pos[1])
-                if self.MouseUpView == self.MouseDownView:
-                    if self.MouseDownView and not self.DragInfo.IsDragging():
-                        if self.MouseDownView.Active:
-                            self.MouseDownView.ClickAction(event.pos,
-                                                           self.MouseDownView, 
-                                                           event.button)
-
-                if self.DragInfo.IsDragging():
-                    self.OnDragEnd(event.pos, self.MouseDownView, self.DragInfo.GetSavedViewPos())
-                    self.DragInfo.EndDrag()
-
-                self.MouseDownView = None
-                self.MouseDownPos = None
-                self.MouseUpView = None
-
-            if self.FocusView:
-                self.FocusView.OnEvent(event)
+        if self.FocusView:
+            self.FocusView.OnEvent(event)
 
 
     def Exit(self):
@@ -979,14 +919,14 @@ class Activity:
     def SetContentView(self, view):
         self.ContentView = view
 
-    def Render(self):
+    def Render(self, surface):
         if self.ContentView:
-            width = self.Context.Surface.get_width()
-            height = self.Context.Surface.get_height()
-            self.Context.Surface.fill(GRAY_50)
+            width = surface.get_width()
+            height = surface.get_height()
+            surface.fill(GRAY_50)
             self.ContentView.Measure(None, None)
             self.ContentView.Layout(0, 0, width, height)
-            self.ContentView.Draw(self.Context.Surface)
+            self.ContentView.Draw(surface)
 
     def StartActivity(self, activityName):
         self.Context.StartActivity(activityName)

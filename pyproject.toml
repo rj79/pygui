@@ -2,6 +2,9 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project]
 name = "pygui"
 version = "0.1"
@@ -16,7 +19,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = ["pygame"]
+dependencies = ["pygame", 
+                "pgapp @ git+https://github.com/rj79/pgapp.git@main"]
 
 [project.urls]
 Homepage = "https://github.com/rj79/pygui"

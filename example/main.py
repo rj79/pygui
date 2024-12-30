@@ -34,8 +34,8 @@ class MainActivity(Activity):
 class OtherActivity(Activity):
     def OnInit(self):
         group = LinearLayout(self.Context)
-        button1 = ButtonView(self.Context, "Start OtherActivity")
-        button1.ClickAction = lambda pos, view, button: self.StartActivity('OtherActivity')
+        button1 = ButtonView(self.Context, "Start MainActivity")
+        button1.ClickAction = lambda pos, view, button: self.StartActivity('MainActivity')
 
         button2 = ButtonView(self.Context, "Switch to MainActivity")
         button2.ClickAction = lambda pos, view, button: self.SwitchToActivity("MainActivity")
@@ -64,5 +64,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=LOGLEVEL, format="%(asctime)s %(message)s")
     app = ExampleApp(800, 600)
     loop = get_event_loop()
-    loop.run_until_complete(app.pygame_task())
+    loop.run_until_complete(app.MainTask())
 

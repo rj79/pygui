@@ -1,3 +1,5 @@
+*.gz
+*.whl
 .venv
 dist
 __pycache__

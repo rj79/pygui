@@ -940,8 +940,8 @@ class Activity:
 
     def Render(self, surface):
         if self.ContentView:
-            width = self.Context.Surface.get_width()
-            height = self.Context.Surface.get_height()
+            width = surface.get_width()
+            height = surface.get_height()
             surface.fill(GRAY_50)
             if self._layoutRequested:
                 self.ContentView.Measure(None, None)

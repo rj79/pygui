@@ -126,32 +126,6 @@ def MeasureText(text, name, size, bold, italic):
     return font.size(text)
 
 
-def DrawText(surface, pos, text,
-             size=12,
-             name='sans',
-             color=(0, 0, 0),
-             bold=False,
-             italic=False,
-             antialias=True):
-    font = GetFont(name, size, bold, italic)
-
-    msgSurface = font.render(text, antialias, color)
-    msgRect = msgSurface.get_rect()
-    msgRect.topleft = (pos[0], pos[1])
-    surface.blit(msgSurface, msgRect)
-
-
-def CenterText(surface, pos, text, size=12, name='sans',
-               color=(0, 0, 0),
-               bold=False,
-               italic=False,
-               antialias=True):
-    dim = MeasureText(text, name, size, bold, italic)
-    DrawText(surface, (pos[0] - dim[0] / 2,
-                       pos[1] - dim[1] / 2),
-             text, size, name, color, bold, italic, antialias)
-
-
 class LayoutParams:
     MATCH_PARENT = -1
     WRAP_CONTENT = -2
@@ -201,11 +175,56 @@ class View:
     def _load_image(self, name):
         global GraphicsPath
         return pygame.image.load(join(GraphicsPath, name))
+ 
+    def _offset(self, obj):
+        """ Translate a point or rectangle from view coordinate to window coordinate"""
+        if len(obj) == 2:
+            # Offset a pos 2-tuple
+            return (obj[0] + self.Rect.left, obj[1] + self.Rect.top)
+        elif len(obj) == 4:
+            # Offset a rect 4-tuple
+            return (obj[0] + self.Rect.left, obj[1] + self.Rect.top, obj[2], obj[3])
+    
+    def DrawLine(self, surface, color, start_pos, end_pos, width=1):
+        """ Draws a line. Coordinates are relative to the top left corner of the view. """
+        pygame.draw.line(surface, color, self._offset(start_pos), self._offset(end_pos), width)
 
-    def _widget_to_window(self, point: Point) -> Point:
-        """ Translate point which is relative to upper left corner of widget
-            to a point relative to the upper left corner of the window """
-        return Point(self.Rect.x, self.Rect.y) + point * (self.TileSize + 1)
+    def DrawRect(self, surface, color, rect, width=0):
+        """ Draws a rectangle. Coordinates are relative to the top left corner of the view. """
+        pygame.draw.rect(surface, color, self._offset(rect), width)
+
+    def FillSelf(self, surface, color):
+        """ Fills the view with a color."""
+        pygame.draw.rect(surface, color, self.Rect)
+
+    def DrawText(self, surface, pos, text,
+                 size=12,
+                 name='sans',
+                 color=(0, 0, 0),
+                 bold=False,
+                 italic=False,
+                 antialias=True, 
+                 align=0):
+        font = GetFont(name, size, bold, italic)
+
+        msgSurface = font.render(text, antialias, color)
+        msgRect = msgSurface.get_rect()
+        if align == 0:
+            msgRect.topleft = self._offset(pos)
+        elif align == 1:
+            msgRect.midtop = self._offset(pos)
+        surface.blit(msgSurface, msgRect)
+
+    def CenterText(self, surface, pos, text, size=12, name='sans',
+                   color=(0, 0, 0),
+                   bold=False,
+                   italic=False,
+                   antialias=True):
+        dim = MeasureText(text, name, size, bold, italic)
+    
+        self.DrawText(surface, (pos[0] - dim[0] / 2,
+                      pos[1] - dim[1] / 2),
+                      text, size, name, color, bold, italic, antialias)
 
     def SetActive(self, state):
         self.Active = state
@@ -325,7 +344,6 @@ class View:
         self.Rect.top = top
         self.Rect.width = width
         self.Rect.height = height
-        pass
 
     def OnEvent(self, event):
         pass
@@ -561,15 +579,15 @@ class TextInputView(TextView):
         else:
             text = self.Text
 
-        DrawText(surface, self.Rect.topleft, text=text,
-                 size=self.TextSize,
-                 color=self.TextColor)
+        self.DrawText(surface, self.Rect.topleft, text=text,
+                      size=self.TextSize,
+                      color=self.TextColor)
 
         if self.Focus:
             if self.Insert:
-                DrawText(surface, self.Rect.topleft, text[0:self.Cursor] + '|',
-                         size=self.TextSize,
-                         color=self.TextColor)
+                self.DrawText(surface, self.Rect.topleft, text[0:self.Cursor] + '|',
+                              size=self.TextSize,
+                              color=self.TextColor)
             else:
                 if self.Cursor > 0:
                     c = text[0:self.Cursor] + '_'
@@ -663,8 +681,8 @@ class ButtonView(TextView):
         if not self.Active:
             color = inactive
             
-        CenterText(surface, (self.Rect.left + self.Rect.width / 2,
-                             self.Rect.top + self.Rect.height / 2),
+        self.CenterText(surface, (self.Rect.width / 2,
+                                  self.Rect.height / 2),
                    text=self.Text,
                    size=self.TextSize,
                    bold=True,
@@ -833,6 +851,7 @@ class Activity:
         self.MouseUpView = None
         self.Initialized = False
         self.DragInfo = DragInfo()
+        self._layoutRequested = False
 
     def GetName(self):
         return self.Name
@@ -921,11 +940,13 @@ class Activity:
 
     def Render(self, surface):
         if self.ContentView:
-            width = surface.get_width()
-            height = surface.get_height()
+            width = self.Context.Surface.get_width()
+            height = self.Context.Surface.get_height()
             surface.fill(GRAY_50)
-            self.ContentView.Measure(None, None)
-            self.ContentView.Layout(0, 0, width, height)
+            if self._layoutRequested:
+                self.ContentView.Measure(None, None)
+                self.ContentView.Layout(0, 0, width, height)
+                self._layoutRequested = False
             self.ContentView.Draw(surface)
 
     def StartActivity(self, activityName):
@@ -944,6 +965,7 @@ class Activity:
                 logging.error("OnInit must set a content view")
                 return
             self.Initialized = True
+        self._layoutRequested = True
         self.OnActivate()
 
     # Do not override

@@ -772,7 +772,7 @@ class DragInfo:
 
 class AppContext(PgApp):
     def __init__(self, width, height):
-        super().__init__(width, height)
+        super().__init__(width, height, one_event_callback=True)
         self.Callback = None
 
         self.ActivityStack = []
